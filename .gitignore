@@ -1,0 +1,27 @@
+node_modules
+dist
+dist-ssr
+*.local
+*.tsbuildinfo
+.playwright-cli
+
+# Built single binary (root and any stray binary in server/)
+/disasterprep
+/server/disasterprep
+
+# Presentation materials (not source code)
+/pitch/
+
+# Staged SPA embedded into the Go binary (rebuilt by `make web`); keep the dir
+# tracked via .gitkeep so `go build` works on a fresh checkout.
+/server/web/*
+!/server/web/.gitkeep
+
+# Local content store (server writes these at runtime)
+/data
+/server/data
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log

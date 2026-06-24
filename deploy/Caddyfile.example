@@ -1,0 +1,8 @@
+# Add this block to your existing Caddyfile (you already run Caddy for other
+# hosts). Caddy fetches/renews TLS automatically. Use a subdomain of a domain
+# YOU control — it does NOT need to be the humanityfirstusa.org domain; the QR
+# just points wherever the app is hosted.
+
+hfprep.yourdomain.com {
+	reverse_proxy 127.0.0.1:8080
+}

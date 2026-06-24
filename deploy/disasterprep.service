@@ -1,0 +1,30 @@
+# systemd unit for the booth server. Install to /etc/systemd/system/disasterprep.service
+# then: systemctl daemon-reload && systemctl enable --now disasterprep
+[Unit]
+Description=Humanity First disaster-prep booth
+After=network.target
+
+[Service]
+Type=simple
+User=disasterprep
+WorkingDirectory=/opt/disasterprep
+ExecStart=/opt/disasterprep/disasterprep
+Restart=always
+RestartSec=3
+
+Environment=PORT=8080
+Environment=CONTENT_DIR=/var/lib/disasterprep
+# Put secrets in this file (chmod 600). Keys to set:
+#   ADMIN_PASSPHRASE=<long random string>
+#   EMAIL_WEBHOOK_URL=https://prod-XX.logic.azure.com/...  (optional; enables emailed plans)
+EnvironmentFile=/etc/disasterprep.env
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/disasterprep
+
+[Install]
+WantedBy=multi-user.target

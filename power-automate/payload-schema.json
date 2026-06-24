@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "properties": {
+    "to": {
+      "type": "string",
+      "description": "Recipient email address entered by the visitor."
+    },
+    "subject": {
+      "type": "string"
+    },
+    "html": {
+      "type": "string",
+      "description": "Pre-rendered HTML email body."
+    },
+    "attachmentName": {
+      "type": "string",
+      "description": "File name for the PDF attachment, e.g. emergency-kit-plan.pdf"
+    },
+    "attachmentBase64": {
+      "type": "string",
+      "description": "Base64-encoded PDF bytes (no data: prefix). Maps to ContentBytes."
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "people": { "type": "integer" },
+        "days": { "type": "integer" },
+        "total": { "type": "number" }
+      }
+    }
+  },
+  "required": ["to", "subject", "html", "attachmentName", "attachmentBase64"]
+}

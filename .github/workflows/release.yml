@@ -1,0 +1,52 @@
+name: release
+
+# Tag a commit (e.g. `git tag v0.1.0 && git push --tags`) to build the
+# self-contained booth binary (SPA embedded) and attach it to a GitHub Release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          VITE_EMAIL_WEBHOOK_URL: ${{ secrets.VITE_EMAIL_WEBHOOK_URL }}
+
+      - name: Stage SPA for embedding
+        run: |
+          rm -rf server/web
+          cp -r dist server/web
+          touch server/web/.gitkeep
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Build binaries
+        working-directory: server
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o ../disasterprep-linux-amd64 .
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o ../disasterprep-linux-arm64 .
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            disasterprep-linux-amd64
+            disasterprep-linux-arm64

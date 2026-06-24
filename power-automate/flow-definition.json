@@ -1,0 +1,130 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "comment": "Humanity First disaster-prep booth — emails the generated kit plan (PDF) from the M365 tenant. Trigger: HTTP POST from the SPA. See README.md.",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "type": "Object",
+      "defaultValue": {}
+    }
+  },
+  "triggers": {
+    "When_a_HTTP_request_is_received": {
+      "type": "Request",
+      "kind": "Http",
+      "inputs": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "to": { "type": "string" },
+            "subject": { "type": "string" },
+            "html": { "type": "string" },
+            "attachmentName": { "type": "string" },
+            "attachmentBase64": { "type": "string" },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "people": { "type": "integer" },
+                "days": { "type": "integer" },
+                "total": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "actions": {
+    "Parse_payload": {
+      "type": "ParseJson",
+      "comment": "The SPA sends Content-Type: text/plain to avoid a CORS preflight, so the body arrives as a string and must be parsed here.",
+      "runAfter": {},
+      "inputs": {
+        "content": "@triggerBody()",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "to": { "type": "string" },
+            "subject": { "type": "string" },
+            "html": { "type": "string" },
+            "attachmentName": { "type": "string" },
+            "attachmentBase64": { "type": "string" },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "people": { "type": "integer" },
+                "days": { "type": "integer" },
+                "total": { "type": "number" }
+              }
+            }
+          },
+          "required": ["to", "subject", "html", "attachmentName", "attachmentBase64"]
+        }
+      }
+    },
+    "Send_an_email_(V2)": {
+      "type": "OpenApiConnection",
+      "runAfter": {
+        "Parse_payload": ["Succeeded"]
+      },
+      "inputs": {
+        "host": {
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+          "connectionName": "shared_office365",
+          "operationId": "SendEmailV2"
+        },
+        "parameters": {
+          "emailMessage/To": "@body('Parse_payload')?['to']",
+          "emailMessage/Subject": "@body('Parse_payload')?['subject']",
+          "emailMessage/Body": "@body('Parse_payload')?['html']",
+          "emailMessage/Importance": "Normal",
+          "emailMessage/Attachments": [
+            {
+              "Name": "@body('Parse_payload')?['attachmentName']",
+              "ContentBytes": "@base64ToBinary(body('Parse_payload')?['attachmentBase64'])"
+            }
+          ]
+        },
+        "authentication": {
+          "type": "ManagedServiceIdentity"
+        }
+      }
+    },
+    "Response_OK": {
+      "type": "Response",
+      "kind": "Http",
+      "comment": "Returns 200 with the CORS header the browser needs to read the result. Without Access-Control-Allow-Origin the SPA fetch throws even though the email sends.",
+      "runAfter": {
+        "Send_an_email_(V2)": ["Succeeded"]
+      },
+      "inputs": {
+        "statusCode": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "sent"
+        }
+      }
+    },
+    "Response_Error": {
+      "type": "Response",
+      "kind": "Http",
+      "runAfter": {
+        "Send_an_email_(V2)": ["Failed", "Skipped", "TimedOut"]
+      },
+      "inputs": {
+        "statusCode": 502,
+        "headers": {
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "error"
+        }
+      }
+    }
+  },
+  "outputs": {}
+}
